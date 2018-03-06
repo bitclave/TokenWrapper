@@ -1,57 +1,45 @@
 pragma solidity ^0.4.11;
 
-import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 import "./BasicTokenWrapper.sol";
 
 
-contract StandardTokenWrapper is ERC20, BasicTokenWrapper {
+contract StandardTokenWrapper is StandardToken, BasicTokenWrapper {
     
-    mapping(address => mapping(address => uint256)) internal allowed;
+    mapping(address => mapping(address => bool)) internal migratedAllowed;
+
+    modifier migrateAllowedIfNeeded(address _owner, address _spender) {
+        if (!migratedAllowed[_owner][_spender]) {
+            allowed[_owner][_spender] = ERC20(prevToken).allowance(_owner, _spender);
+            migratedAllowed[_owner][_spender] = true;
+        }
+        _;
+    }
 
     function StandardTokenWrapper(address _token) public BasicTokenWrapper(_token) {
     }
 
     function allowance(address _owner, address _spender) public view returns(uint256) {
-        return ERC20(prevToken).allowance(_owner, _spender) + allowed[_owner][_spender];
-    }
-
-    function transferFrom(address _from, address _to, uint256 _value) public returns(bool) {
-        require(_to != address(0));
-        require(_value <= balanceOf(_from));
-        require(_value <= allowance(_from, msg.sender));
-
-        balances[_from] -= _value;
-        balances[_to] += _value;
-        allowed[_from][msg.sender] -= _value;
-        Transfer(_from, _to, _value);
-        return true;
-    }
-
-    function approve(address _spender, uint256 _value) public returns(bool) {
-        allowed[msg.sender][_spender] = _value - ERC20(prevToken).allowance(msg.sender, _spender);
-        Approval(msg.sender, _spender, _value);
-        return true;
-    }
-
-    function increaseApproval(address _spender, uint _addedValue) public returns(bool) {
-        uint256 prevAllowance = allowance(msg.sender, _spender);
-        uint256 currentAllowance = prevAllowance + _addedValue;
-        require(prevAllowance <= currentAllowance);
-        allowed[msg.sender][_spender] += _addedValue;
-        Approval(msg.sender, _spender, currentAllowance);
-        return true;
-    }
-
-    function decreaseApproval(address _spender, uint _subtractedValue) public returns(bool) {
-        uint256 prevAllowance = allowance(msg.sender, _spender);
-        if (_subtractedValue > prevAllowance) {
-            _subtractedValue = prevAllowance;
+        if (!migratedAllowed[_owner][_spender]) {
+            return ERC20(prevToken).allowance(_owner, _spender);
         }
-        uint256 currentAllowance = prevAllowance - _subtractedValue;
-        require(currentAllowance <= prevAllowance);
-        allowed[msg.sender][_spender] -= _subtractedValue;
-        Approval(msg.sender, _spender, currentAllowance);
-        return true;
+        return allowed[_owner][_spender];
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) migrateAllowedIfNeeded(_from, msg.sender) migrateBalancesIfNeeded(_from) public returns(bool) {
+        return super.transferFrom(_from, _to, _value);
+    }
+
+    function approve(address _spender, uint256 _value) migrateAllowedIfNeeded(msg.sender, _spender) public returns(bool) {
+        return super.approve(_spender, _value);
+    }
+
+    function increaseApproval(address _spender, uint _addedValue) migrateAllowedIfNeeded(msg.sender, _spender) public returns(bool) {
+        return super.increaseApproval(_spender, _addedValue);
+    }
+
+    function decreaseApproval(address _spender, uint _subtractedValue) migrateAllowedIfNeeded(msg.sender, _spender) public returns(bool) {
+        return super.decreaseApproval(_spender, _subtractedValue);
     }
 
 }

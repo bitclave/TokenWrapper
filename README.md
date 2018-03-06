@@ -22,8 +22,8 @@ On macOS you also need to install watchman: `brew install watchman`
 3. Supports a lot of OpenZeppelin tokens:
     - `BasicTokenWrapper` for `BasicToken`
     - `StandardTokenWrapper` for `StandardToken`
-    - `MintableTokenWrapper` for `MintableToken`
     - `BurnableTokenWrapper` for `BurnableToken`
+    - `MintableToken` itself
     - More coming soon ...
 
 # Example of simple MyToken upgrade
