@@ -9,6 +9,14 @@ contract BasicTokenWrapper is BasicToken {
     ERC20Basic prevToken;
     mapping(address => bool) migratedBalances;
     
+    modifier migrateBalancesIfNeeded(address _owner) {
+        if (!migratedBalances[_owner]) {
+            balances[_owner] += prevToken.balanceOf(_owner);
+            migratedBalances[_owner] = true;
+        }
+        _;
+    }
+
     function BasicTokenWrapper(address _token) public {
         prevToken = ERC20Basic(_token);
         totalSupply_ = ERC20Basic(_token).totalSupply();
@@ -22,11 +30,7 @@ contract BasicTokenWrapper is BasicToken {
         return balances[_owner];
     }
 
-    function transfer(address _to, uint256 _value) public returns(bool) {
-        if (!migratedBalances[msg.sender]) {
-            balances[msg.sender] = prevToken.balanceOf(msg.sender);
-            migratedBalances[msg.sender] = true;
-        }
+    function transfer(address _to, uint256 _value) migrateBalancesIfNeeded(msg.sender) public returns(bool) {
         return super.transfer(_to, _value);
     }
 
