@@ -23,7 +23,7 @@ contract StandardTokenWrapper is StandardToken, BasicTokenWrapper {
         if (!migratedAllowed[_owner][_spender]) {
             return ERC20(prevToken).allowance(_owner, _spender);
         }
-        return allowed[_owner][_spender];
+        return super.allowance(_owner, _spender);
     }
 
     function transferFrom(address _from, address _to, uint256 _value) migrateAllowedIfNeeded(_from, msg.sender) migrateBalancesIfNeeded(_from) public returns(bool) {
