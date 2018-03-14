@@ -18,16 +18,16 @@ contract BasicTokenWrapper is BasicToken {
     }
 
     function BasicTokenWrapper(address _token) public {
+        require(Pausable(_token).paused());
         prevToken = ERC20Basic(_token);
         totalSupply_ = ERC20Basic(_token).totalSupply();
-        require(Pausable(prevToken).paused());
     }
 
     function balanceOf(address _owner) public view returns(uint256 balance) {
         if (!migratedBalances[_owner]) {
-            return prevToken.balanceOf(_owner) + balances[_owner];
+            return prevToken.balanceOf(_owner) + super.balanceOf(_owner);
         }
-        return balances[_owner];
+        return super.balanceOf(_owner);
     }
 
     function transfer(address _to, uint256 _value) migrateBalancesIfNeeded(msg.sender) public returns(bool) {
